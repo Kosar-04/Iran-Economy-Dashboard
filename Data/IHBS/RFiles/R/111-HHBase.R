@@ -18,17 +18,20 @@ library(data.table)
 library(stringr)
 library(readxl)
 
-
+# Loop over years 1383 (2004) to 1402 (2023)
 for(year in (83:102)){
   cat(paste0("\n------------------------------\nYear:",year,"\n"))
   
+  # Load raw survey data for the year
   load(file=paste0(Settings$HEISRawPath,"Y",year,"Raw.rda"))
-  
+
+  # Load county code mapping data for specific years (1387 to 1391)
   if(year >86 & year < 92 ){ 
   load(file=paste0(Settings$HEISCountyCodePath,"Y",year,
                    Settings$HEISCountyCodeFileName,".rda"))
   }
-  
+
+   # Handle years before 1387 separately due to different structure of data
   if(year < 87){           # RxxData & UxxData tables are provided Since 1387
     RData <- Tables[[paste0("R",year,"P2")]][,1,with=FALSE]
     RData[, Region:=factor(x="Rural",levels=c("Urban","Rural"))]
@@ -38,6 +41,7 @@ for(year in (83:102)){
     rm(RData,UData)
     setnames(HHBase,c("HHID","Region"))
     HHBase[,Year:=year]
+     # Format household IDs to standardized string length
     if(year==74){
       HHBase[,HHIDs:=formatC(HHID, width = 8, flag = "0")]
     }else if(year<77){
@@ -45,14 +49,17 @@ for(year in (83:102)){
     }else if(year %in% 77:86){
       HHBase[,HHIDs:=formatC(HHID, width = 9, flag = "0")]
     }
+    # Extract Quarter from HHID string depending on year structure
     if(year < 77){
       HHBase[,Quarter:=as.integer(str_sub(HHIDs,4,4))]
     }else{
       HHBase[,Quarter:=as.integer(str_sub(HHIDs,6,6))]
     }
+    # For early years, month information is unavailable
     HHBase[,Month:=NA_integer_]
     
   }else{
+    # For years 1387 and later, structure is consistent
     RData <- Tables[[paste0("R",year,"DATA")]][,c(1:2),with=FALSE]
     RData[, Region:=factor(x="Rural",levels=c("Urban","Rural"))]
     UData <- Tables[[paste0("U",year,"DATA")]][,c(1:2),with=FALSE]
@@ -60,10 +67,13 @@ for(year in (83:102)){
     HHBase <- rbind(RData, UData)
     rm(RData,UData)
     setnames(HHBase,c("HHID","Month","Region"))
+    # Adjust month values (HEIS uses 1=Farvardin but survey is one month behind)
     HHBase[,Month:=ifelse(Month==1,12,Month - 1)]
+    # Correct data error for one specific HHID in year 1397
     HHBase[HHID=="10107019605" & year==97,Month:=2]  # Odd Month (-1) in 1397
     if(length(which(HHBase$Month<=0))>0)
       stop("Odd Month Number Here!")
+     # Compute quarter from month
     HHBase[,Quarter:=(Month-1)%/%3+1]
     HHBase[,HHIDs:=as.character(HHID)]
   }
@@ -74,7 +84,8 @@ for(year in (83:102)){
   
   HHBase <- HHBase[!is.na(HHID)]
  # HHBase[,ProvinceCode:=as.integer(str_sub(HHIDs,2,3))]
-  
+
+  # Extract CountyCode differently depending on year and availability of SHCode
   if(year <= 86 | year >= 92 ){
     HHBase[,CountyCode:=as.integer(str_sub(HHIDs,2,5))]
   }
@@ -83,14 +94,14 @@ for(year in (83:102)){
     HHBase[,CountyCode:=as.integer(SHCode)]
   }
   
-  #Tehran-Alborz
+  # Update CountyCode for cities moved to Alborz Province
   if(year >76 & year < 92 ){ 
     HHBase[CountyCode==2305, CountyCode:=3001] # Karaj
     HHBase[CountyCode==2308, CountyCode:=3002] # Savojbolagh 
   }
   
   
-  #Khorasan
+  # Handle Khorasan provincial splits and re-mappings for old years
   if(year >76 & year < 87 ){ 
     HHBase[CountyCode==901, CountyCode:=2801] # Esfarayen 
     HHBase[CountyCode==902, CountyCode:=2802] # Bojnourd 
@@ -106,7 +117,8 @@ for(year in (83:102)){
     
     HHBase[CountyCode==2809, CountyCode:=2804] # Shirvan
   }
-    if(year %in% 84:86){
+   # Handle Khorasan mapping for 1384–1386 specifically
+  if(year %in% 84:86){
       HHBase[CountyCode==2824, CountyCode:=2803] # Jaram
       HHBase[CountyCode==2809, CountyCode:=2804] # Shirvan
       HHBase[CountyCode==2813, CountyCode:=2805] # Faruj     # Guess!
@@ -120,7 +132,7 @@ for(year in (83:102)){
     }
     
  
-    
+  # Handle counties that changed provinces  
   HHBase[CountyCode==2110, CountyCode:=2911] # Tabas
   HHBase[CountyCode==2315, CountyCode:=3003] # Nazarabad
   
@@ -140,7 +152,8 @@ for(year in (83:102)){
   HHBase[,ProvinceCode:=CountyCode %/% 100]
   
   HHBase[,Year:=year]
-  
+
+  # Merge with external metadata to get Province and County names
   Geo2 <- data.table(read_excel(Settings$MetaDataFilePath,Settings$MDS_Geo2))
   Geo2 <- Geo2[,.(ProvinceCode=SCINo,ProvinceName=NameEnglish)]
   HHBase <- merge(HHBase,Geo2,by="ProvinceCode")
@@ -156,7 +169,7 @@ for(year in (83:102)){
                       CountyCode,CountyName)]
   
 
-  
+  # Define NewArea: for most urban regions, it is the county
   HHBase[,NewArea:=ProvinceCode]
   HHBase[Region=="Urban" & 
            CountyCode %in% c(2301,303,             # Tehran (County), Tabriz,
