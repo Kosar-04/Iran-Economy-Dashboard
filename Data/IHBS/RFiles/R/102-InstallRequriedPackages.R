@@ -6,12 +6,14 @@
 
 rm(list=ls())
 
+# Logs the start time for performance tracking
 starttime <- proc.time()
 cat("\n\n================ Install Required Packages =====================================\n")
 
 
 
-
+# List of all required R packages for the project
+# These include data wrangling, visualization, modeling, statistical, machine learning, and GIS-related packages
 pkglist <- c("yaml","RODBC","readxl","tools","foreign","data.table",
              "stringr","XLConnect","sm",#"spatstat",
              "ggplot2","haven",
@@ -57,7 +59,7 @@ for(pkg in pkglist){
 }
 
 
-
+# Logs the end time and prints duration
 endtime <- proc.time()
 
 cat("\n\n============================\nIt took ")
