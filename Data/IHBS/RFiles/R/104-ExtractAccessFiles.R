@@ -18,10 +18,13 @@ library(tools)
 
 Settings <- yaml.load_file("Settings.yaml")
 
+# Load metadata containing compressed filenames for each survey year
 compressed_file_names_df <- read_excel(path = Settings$MetaDataFilePath,
                                        sheet = Settings$MDS_CFN)
 
+# Get list of years for which Access database files already exist
 existing_years <- file_path_sans_ext(list.files(Settings$HEISAccessPath))
+# Identify the target years for which data should be extracted
 needed_years <- Settings$startyear:Settings$endyear
 years_to_extract <- setdiff(needed_years,existing_years)
 
@@ -30,11 +33,12 @@ files_to_extract <- compressed_file_names_df[
 
 cmdline <- paste0(normalizePath("../exe/7z/7z.exe")," e -y ")      # Use 7-zip binary
 
-
+# Save current working directory and set up a temporary folder
 cwd <- getwd()
 dir.create("temp")
 setwd("temp")
 
+# Loop through each year to extract its corresponding Access file
 for(year in years_to_extract){
   filename <- compressed_file_names_df[
     compressed_file_names_df$Year ==year,]$CompressedFileName
@@ -54,6 +58,7 @@ for(year in years_to_extract){
   }
   unlink("*.*")
 }
+# Restore original working directory and delete temp folder
 setwd(cwd)
 unlink("temp",recursive = TRUE,force = TRUE)
 
@@ -66,7 +71,7 @@ if (length(years_had_error)>0 ){
   cat(years_had_error)
 }
 
-
+# Display execution time
 endtime <- proc.time()
 
 cat("\n\n============================\nIt took ")
