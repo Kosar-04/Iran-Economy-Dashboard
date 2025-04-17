@@ -11,10 +11,11 @@ starttime <- proc.time()
 cat("\n\n================ BuildDirectoryStructure =====================================\n")
 
 
-
+# Load YAML library to read project-wide settings from external config file
 library(yaml)
 Settings <- yaml.load_file("Settings.yaml")
 
+# Create all required folders based on config settings
 dir.create(Settings$HEISPath,showWarnings = FALSE)
 dir.create(Settings$HEISCompressedPath,showWarnings = FALSE)
 dir.create(Settings$HEISAccessPath,showWarnings = FALSE)
