@@ -18,7 +18,7 @@ library(readxl)
 library(data.table)
 library(stringr)
 
-
+# Define non-food expenditure categories
 sections_names <- c("Cigar","Cloth","Communication","Energy","Furniture",
                     "Hygiene","Medical","Transportation","Communication",
                     "Amusement","Education","Hotel","Restaurant","Other",
@@ -31,6 +31,7 @@ for(section in sections_names){
   SectionTables <- data.table(read_excel(Settings$MetaDataFilePath,
                                          sheet=section_sheet))
   
+  # Process data for each year (from 1383 to latest)
   for(year in (83:Settings$endyear)){
     cat(paste0("\n------------------------------\nYear:",year,"\n"))
     load(file=paste0(Settings$HEISRawPath,"Y",year,"Raw.rda"))
@@ -38,6 +39,7 @@ for(section in sections_names){
     tab <- st$Table
     if(is.na(tab))
       next
+    # Combine urban and rural data
     UTS <- Tables[[paste0("U",year,tab)]]
     RTS <- Tables[[paste0("R",year,tab)]]
     TS <- rbind(UTS,RTS)
@@ -54,6 +56,7 @@ for(section in sections_names){
     
     TS[,(paste0(section,"_Exp")):=as.numeric(get(paste0(section,"_Exp")))]
     
+    # Special handling for monthly conversion in P3S13 tables
     if(tab=="P3S13"){
       TS[,(paste0(section,"_Exp")):=get(paste0(section,"_Exp"))/12]
       #cat("======*****========")
@@ -95,6 +98,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   TL <- TL[,pcols,with=FALSE]
   TL <- TL[Code %in% ty$StartCode:ty$EndCode]
   TL[,House_Exp:=as.numeric(House_Exp)]
+  # Process main housing codes
   mcs <- ty$MainCodes
   mcs <- substr(mcs,1,nchar(mcs)-1)
   maincodes <- eval(parse(text=paste0("c(",mcs,")")))
@@ -113,6 +117,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   
   HouseData <- TL[,lapply(.SD,sum),by=HHID]
 
+  # Merge with housing characteristics
   load(file=paste0(Settings$HEISProcessedPath,"Y",year,
                    "HHHouseProperties.rda"))
   HousePropData <- HHHouseProperties[,.(HHID,room,area)]
