@@ -21,6 +21,7 @@ library(data.table)
 DurableGroups <- data.table(read_excel(Settings$MetaDataFilePath,
                                        sheet=Settings$MDS_DurableGroups))
 
+# Determine earliest year with classification data
 mst <- min(DurableGroups$StartYear)
 
 for(year in (max(Settings$startyear,mst):Settings$endyear)){
@@ -28,11 +29,13 @@ for(year in (max(Settings$startyear,mst):Settings$endyear)){
   
   load(file=paste0(Settings$HEISProcessedPath,"Y",year,"DurableData_Detail.rda"))
   
+  # Process items with valid classification
   DDIs <- DurableData_Detail[!is.na(Item)
                              ,.(Code=first(Code),
                                 Durable_Exp=sum(Durable_Exp),
                                 Durable_Sale=sum(Durable_Sale))
                              ,by=.(HHID,Item)]
+  # Calculate net expenditure (purchases minus sales)
   DDIs[,Net_Durable_Exp:=Durable_Exp-Durable_Sale]
   DDIs[Net_Durable_Exp<0,Net_Durable_Exp:=0]
   
@@ -55,9 +58,14 @@ for(year in (max(Settings$startyear,mst):Settings$endyear)){
   g3 <- DurableGroups[year >= StartYear & year <= EndYear & Group==3]$Code
   g4 <- DurableGroups[year >= StartYear & year <= EndYear & Group==4]$Code
   
+  # Calculate household expenditures by group:
+  # Group 1: Add to non-durable consumption
   D1 <- DD[Code %in% g1, .(Add_to_NonDurable = sum(Net_Durable_Exp,na.rm = TRUE)),by=HHID]
+  # Group 2: Durable with depreciation
   D2 <- DD[Code %in% g2, .(Durable_Dep = sum(Net_Durable_Exp,na.rm = TRUE)),by=HHID]
+  # Group 3: Non-depreciating durables 
   D3 <- DD[Code %in% g3, .(Durable_NoDep = sum(Net_Durable_Exp,na.rm = TRUE)),by=HHID]
+  # Group 4: Emergency/medical durables
   D4 <- DD[Code %in% g4, .(Durable_Emergency = sum(Net_Durable_Exp,na.rm = TRUE)),by=HHID]
   
   Durable_4Groups <- merge(D1,D2,all=TRUE)
