@@ -20,13 +20,14 @@ library(readxl)
 
 source("000-FunctionDefs.R")
 
-
+# Load metadata for P2 columns mapping
 P2Cols <- data.table(read_excel(Settings$MetaDataFilePath, Settings$MDS_P2Cols))
-
+# Loop over each survey year
 for(year in (Settings$startyear:Settings$endyear)){    
   cat(paste0("\n------------------------------\nYear:",year,"\n"))
   load(file=paste0(Settings$HEISRawPath,"Y",year,"Raw.rda"))
   
+  # Merge rural and urban P2 tables
   P2 <- rbind(Tables[[paste0("R",year,"P2")]],Tables[[paste0("U",year,"P2")]])
   nP2 <- names(P2)
   if(length(which(sapply(P2, is.character)))>0){
@@ -58,12 +59,14 @@ for(year in (Settings$startyear:Settings$endyear)){
                                  "other"))]
   save(P2, file=paste0(Settings$HEISProcessedPath,"Y",year,
                                       "HHHouseProperties.rda"))
+  # Convert cooking fuel type to labeled factor
   P2[,cookfuel :=factor(cookfuel, levels=1:10, 
                         labels=c("karosine","gasoline",
                                  "gas","pipedgas",
                                  "electricity","woodandcharcoal",
                                  "Animalfuel","charcoal","otherFuel","None"))]
   
+  # Convert heating fuel type to labeled factor
   P2[,heatfuel :=factor(heatfuel, levels=11:20, 
                         labels=c("karosine","gasoline",
                                  "gas","pipedgas",
