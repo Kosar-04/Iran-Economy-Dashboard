@@ -20,12 +20,13 @@ library(stringr)
 
 
 cat("\n\n================ Section13:HHDurable ==============================\n")
+# Load metadata for durable goods classification
 DurableTables <- data.table(read_excel(Settings$MetaDataFilePath,
                                        sheet=Settings$MDS_Durable))
 DurableItems <- data.table(read_excel(Settings$MetaDataFilePath,
                                       sheet=Settings$MDS_DurableItems))
 
-
+# Process data for each survey year
 for(year in (Settings$startyear:Settings$endyear)){
   cat(paste0("\n------------------------------\nYear:",year,"\n"))
   load(file=paste0(Settings$HEISRawPath,"Y",year,"Raw.rda"))
@@ -60,6 +61,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   save(DurableData_Detail, file = paste0(Settings$HEISProcessedPath,"Y",year,
                                          "DurableData_Detail.rda"))
   
+  # Process ownership data from housing properties
   load(file=paste0(Settings$HEISProcessedPath,"Y",year,"HHHouseProperties.rda"))
   
   itemslist <- c("cellphone","washer","dishwasher","car",
@@ -72,6 +74,7 @@ for(year in (Settings$startyear:Settings$endyear)){
       HHHouseProperties[,(item):=FALSE]
     }
   
+  # Create ownership indicators (1=owned, 0=not owned)
   OwnsDurableItems <- HHHouseProperties[,.(HHID,
                                            Cellphone=cellphone*1,
                                            Telephone=phone*1,
