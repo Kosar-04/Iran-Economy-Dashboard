@@ -4,8 +4,8 @@
 # needed for each household (Based on calorie need tables by the World Bank and
 # and the Nutrition Institute)
 #
-# Copyright © 2016-2022: Majid Einian & Zahra Shahidi
-# Copyright © 2016-2022: Majlis Research Center (The Research Center of Islamic Legislative Assembly)
+# Copyright Â© 2016-2022: Majid Einian & Zahra Shahidi
+# Copyright Â© 2016-2022: Majlis Research Center (The Research Center of Islamic Legislative Assembly)
 # Licence: GPL-3
 # For information on how to use and cite the results, see ResultsUsageLicence.md
 
@@ -25,7 +25,7 @@ library(stringr)
 source("000-FunctionDefs.R")
 
 P1Cols <- data.table(read_excel(Settings$MetaDataFilePath, Settings$MDS_P1Cols))
-
+# Load metadata for personal information and education coding
 EduCodesA <- data.table(read_excel(Settings$MetaDataFilePath,Settings$MDS_EC_A))
 EduCodesB <- data.table(read_excel(Settings$MetaDataFilePath,Settings$MDS_EC_B))
 EduCodesC <- data.table(read_excel(Settings$MetaDataFilePath,Settings$MDS_EC_C))
@@ -35,12 +35,13 @@ years <- Settings$startyear:Settings$endyear
 
 for(year in (83:Settings$endyear)){
   cat(paste0("\n------------------------------\nYear:",year,"\n"))
+  # Load processed household data, infant milk data, raw HEIS data, and household weights
   load(file=paste0(Settings$HEISProcessedPath,"Y",year,"HHBase.rda"))
   load(file=paste0(Settings$HEISProcessedPath,"Y",year,"InfantMilk.rda"))
   load(file=paste0(Settings$HEISRawPath,"Y",year,"Raw.rda"))
   load(file=paste0(Settings$HEISWeightsPath,Settings$HEISWeightFileName,year,".rda"))
   
-  
+  # Choose correct education code table based on year
   if(year<=84){
     EduCodeT <- EduCodesA
   }else if(year %in% 85:92){
@@ -67,6 +68,7 @@ for(year in (83:Settings$endyear)){
   
   
   P1[is.na(Age),Age:=0L]
+  # Replace relationship and sex codes with descriptive labels
   P1[,Relationship :=factor(Relationship, levels=1:9, 
                             labels=c("Head","Spouse","Child","Child-in-Law",
                                      "Grand-Child","Parent","Sister/Brother",
