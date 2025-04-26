@@ -17,16 +17,19 @@ library(data.table)
 library(stringr)
 library(readxl)
 
+# Load food expenditure metadata
 FoodTables <- data.table(read_excel(Settings$MetaDataFilePath,sheet=Settings$MDS_Food))
 
 
 for (year in (Settings$startyear:Settings$endyear)){
   cat(paste0("\n------------------------------\nYear:", year, "\n"))
   load(file = paste0(Settings$HEISRawPath, "Y", year, "Raw.rda"))
+  # Identify table name for current year from metadata
   ft <- FoodTables[Year == year]
   tab <- ft$Table
   if (is.na(tab))
     next
+  # Combine urban and rural food expenditure tables
   UTF <- Tables[[paste0("U",year,tab)]]
   RTF <- Tables[[paste0("R",year,tab)]]
   TF <- rbind(UTF,RTF)
@@ -42,6 +45,7 @@ for (year in (Settings$startyear:Settings$endyear)){
   TF <- TF[,Code:=NULL]
   TF[is.na(TF)] <- 0
 
+  # Aggregate total food expenditure per household
   TotalFoodExpData <- TF[,lapply(.SD,sum),by=HHID,.SDcols=c("FoodExpenditure")]
   save(TotalFoodExpData, file = paste0(Settings$HEISProcessedPath,"Y",year,"TotalFoodExp.rda"))
 }
