@@ -19,9 +19,11 @@ for(year in (Settings$startyear:Settings$endyear)){
   cat(paste0("\n------------------------------\nYear:",year,"\n"))
  
   load(file=paste0(Settings$HEISProcessedPath,"Y",year,"BigFData.rda"))
+  # Calculate total daily nutritional intake per household
   FoodNutritionData <- BigFData[,.(FoodKCaloriesHH=sum(FoodKCalories),
                        FoodProteinHH=sum(FoodProtein)),by=HHID]
   
+  # Remove extreme outliers (likely reporting errors)
   FoodNutritionData <- FoodNutritionData[FoodKCaloriesHH<100000] # arbitrary removal of outliers 
   # TODO: remove households that had some event (religious, weddings, ...) instead of this arbitrary removal
 
