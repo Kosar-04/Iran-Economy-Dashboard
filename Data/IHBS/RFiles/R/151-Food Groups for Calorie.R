@@ -10,6 +10,7 @@ starttime <- proc.time()
 library(yaml)
 Settings <- yaml.load_file("Settings.yaml")
 
+# Define leap years in Persian calendar for accurate daily calculations
 leapyears <- c(seq(1280,1308,by=4),
                seq(1313,1341,by=4),
                seq(1346,1370,by=4),
@@ -43,6 +44,7 @@ for(year in (Settings$startyear:Settings$endyear)){
     HHBase[,Month:=NA]
   }
   
+  # Calculate survey days per household
   if(length(which(is.na(HHBase$Month)))>1){     # For years withouout month info`
     DayCount <- HHBase[,.(HHID,Days=ifelse(Quarter<=2,31,30))]
   }else{
@@ -68,6 +70,7 @@ for(year in (Settings$startyear:Settings$endyear)){
       if(length(x)>0)
         setnames(TF,n,names(ft)[x])
     }
+    # Handle different data structures across years
     if(year %in% 63:82){
       pcols <- intersect(names(TF),c("HHID","Code","Kilos","Expenditure","Price"))
       TF <- TF[,pcols,with=FALSE]
