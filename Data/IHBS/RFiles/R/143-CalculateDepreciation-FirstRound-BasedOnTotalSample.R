@@ -27,12 +27,15 @@ DurableGroups <- data.table(read_excel(Settings$MetaDataFilePath,sheet=Settings$
 for(year in (83:Settings$endyear)){
   cat(paste0("\nYear:",year,"\t"))
   
+  # Load processed durable goods data
   load(file = paste0(Settings$HEISProcessedPath,"Y",
                      year,"DurableData_NetDetail.rda"))
 
+  # Load ownership data
   load(file=paste0(Settings$HEISProcessedPath,"Y",year,
                    "OwnsDurableItems.rda"))
   
+  # Load household survey weights
   load(file=paste0(Settings$HEISWeightsPath,Settings$HEISWeightFileName,year,".rda"))
 
   HHWeights <- data.table(HHWeights)
@@ -51,8 +54,10 @@ for(year in (83:Settings$endyear)){
       g2 = g2,
       Weights = HHWeights[,.(HHID,Weight)])
   
+  # Load durable goods groups data and merge with depreciation results
   load(file=paste0(Settings$HEISProcessedPath,"Y",year,"Durable_4Groups.rda"))
   A <- merge(Durable_4Groups,OwnedDurableItemsDepreciation,by="HHID")
+  # Report ratio of mean depreciation to mean durable expenditure
   cat(A[,.(mean(OwnedDurableItemsDepreciation)/mean(Durable_Dep))]$V1)
   save(OwnedDurableItemsDepreciation,
        file=paste0(Settings$HEISProcessedPath,"Y",
