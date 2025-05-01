@@ -5,6 +5,17 @@
 # Copyright © 2016-2022: Majlis Research Center (The Research Center of Islamic Legislative Assembly)
 # Licence: GPL-3
 
+#' Calculates Weighted Deciles and Percentiles for Household Data
+#' @param Data A data.table containing household-level survey data.
+#' @param PriceIndexDT (Optional) A data.table with regional price index information to adjust for regional price differences.
+#' @param OrderVar A character string naming the variable to be used for ordering (e.g., consumption per capita).
+#' @param RegionVar A character string naming the regional classification variable used to determine within-region rankings.
+#' @param WeightVar A character string naming the variable representing household sampling weights.
+#' @return A modified data.table with new columns for decile (`Decile`), percentile (`Percentile`), and bottom quartile flag (`First25`).
+#' @examples
+#' CalculateDeciles(Data = HBSdata, PriceIndexDT = PriceIndex, OrderVar = "Total_Exp_Pc", RegionVar = "Province", WeightVar = "Weight")
+#' @export
+
 library(spatstat)
 library(data.table)
 
