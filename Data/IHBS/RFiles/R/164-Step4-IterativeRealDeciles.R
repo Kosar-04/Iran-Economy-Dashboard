@@ -3,6 +3,7 @@
 # Copyright © 2020-2022 :Majid Einian & Arin Shahbazian
 # Copyright © 2016-2022: Majlis Research Center (The Research Center of Islamic Legislative Assembly)
 # Licence: GPL-3
+# This script estimates real deciles and identifies initial poor households based on an iterative Tornqvist price index adjusted for calorie needs and durable goods depreciation.
 
 rm(list=ls())
 
@@ -41,7 +42,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   HHWeights <- data.table(HHWeights)
   HHWeights[,HHID:=as.numeric(HHID)]
   
-  
+  # Extract relevant columns into SMD (Selected Merged Data)
   SMD <- MD[,c("HHID", "Region", "NewArea", 
                "NewArea_Name",
                union(Settings$ExpenditureCols,Settings$ConsumptionCols),
@@ -55,10 +56,11 @@ for(year in (Settings$startyear:Settings$endyear)){
                "Calorie_Need_WorldBank",
                "Calorie_Need_NutritionInstitute", 
                "Weight", "MeterPrice", "Size", "EqSizeOECD"),with=FALSE]
+  # Merge housing tenure information
   SMD <- merge(SMD,HHHouseProperties[,.(HHID,tenure)],by="HHID")
 
 
-  #Choose one of these
+  # Choose one of these
   SMD[,Bundle_Value:=TOriginalFoodExpenditure_Per*Calorie_Need_WorldBank/TFoodKCaloriesHH_Per]
   #SMD[,Bundle_Value:=TOriginalFoodExpenditure_Per*Calorie_Need_NutritionInstitute/TFoodKCaloriesHH_Per]
   #SMD[,Bundle_Value:=TOriginalFoodExpenditure_Per*Settings$KCaloryNeed_Adult_WorldBank/TFoodKCaloriesHH_Per]
@@ -68,6 +70,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   
   PriceDTBasedOnTotalSample <- CalcTornqvistIndex(SMD)
 
+  # Assign real deciles and percentiles based on price-adjusted consumption
   GDC <- DoDeciling(HHDT = SMD,
                     PriceIndexDT = PriceDTBasedOnTotalSample,
                     OrderingVar = "Consumption",
@@ -75,6 +78,7 @@ for(year in (Settings$startyear:Settings$endyear)){
                                       First25=First25,
                                       Dcil_Gen_Cons_PAdj=Decile,         #Decile_General_Consumption_PriceAdj
                                       Pctl_Gen_Cons_PAdj=Percentile)]
+  # Assign real deciles and percentiles based on price-adjusted expenditure
   GDX <- DoDeciling(HHDT = SMD,
                     PriceIndexDT = PriceDTBasedOnTotalSample,
                     OrderingVar = "Expenditure",
@@ -84,9 +88,10 @@ for(year in (Settings$startyear:Settings$endyear)){
   SMD <- merge(SMD,GDC)
   SMD <- merge(SMD,GDX)
  
-  #table(SMD[,.(Dcil_Gen_Cons_PAdj,Dcil_Gen_Exp_PAdj)])
+  # table(SMD[,.(Dcil_Gen_Cons_PAdj,Dcil_Gen_Exp_PAdj)])
   g2 <- DurableGroups[year >= StartYear & year <= EndYear & Group==2]$Code
   
+  # Estimate owned durable goods depreciation using general consumption decile
   OwnedDurableItemsDepreciation <- 
     Calculate_OwnedDurableItemsDepreciation(
       DurableData_ExpDetail = DD,
@@ -97,6 +102,7 @@ for(year in (Settings$startyear:Settings$endyear)){
       g2 = g2,
       Weights = HHWeights[,.(HHID,Weight)])
   
+  # Update durable depreciation-adjusted expenditure/consumption in SMD
   SMD <- UpdateForDurableDepr(SMD,OwnedDurableItemsDepreciation)
 
   SMD <- SMD[,IPboPct:=ifelse(Pctl_Gen_Cons_PAdj %in% 1:Settings$InitialPoorPercentileMax,1,0)]
@@ -105,6 +111,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   
   SMD[,IPboPctLI:=1]
   i <- 0
+  # Iterative reclassification of poor based on new price indices
   while(SMD[,sum((IPboPct-IPboPctLI)^2)]>0.001*nrow(SMD) & i <50){
     i <- i+1
     SMD[,IPboPctLI:=IPboPct]
@@ -116,6 +123,7 @@ for(year in (Settings$startyear:Settings$endyear)){
     if(min(SMDIterationPoor[,.N,by=.(Region,NewArea_Name)]$N)==0)
       stop("HERE Some Area goes missing!")
     
+    # Recalculate Tornqvist index based on current iteration poor
     PriceDTBasedOnThisIterationPoor <- CalcTornqvistIndex(SMDIterationPoor)
 
     #   print(PriceDTBasedOnThisIterationPoor[Region=="Rural" & NewArea_Name=="Semnan",])
@@ -126,12 +134,13 @@ for(year in (Settings$startyear:Settings$endyear)){
                                         First25=First25,
                                         Dcil_TIP_Cons_PAdj=Decile,         #Decile_ThisIterationPoor_Consumption_PriceAdj
                                         Pctl_TIP_Cons_PAdj=Percentile)]
+    # Update SMD with new decile and poor classification
     SMD[,First25:=NULL]
     SMD[,Dcil_TIP_Cons_PAdj:=NULL]
     SMD[,Pctl_TIP_Cons_PAdj:=NULL]
     SMD <- merge(SMD,IPDC)
     
-    
+    # Re-estimate depreciation using updated deciles
     OwnedDurableItemsDepreciation <- 
       Calculate_OwnedDurableItemsDepreciation(
         DurableData_ExpDetail = DD,
@@ -144,18 +153,19 @@ for(year in (Settings$startyear:Settings$endyear)){
 
     SMD <- UpdateForDurableDepr(SMD,OwnedDurableItemsDepreciation)
     
-
+    # Re-assign poor based on new percentiles
     SMD <- SMD[,IPboPct:=ifelse(Pctl_TIP_Cons_PAdj %in% 1:Settings$InitialPoorPercentileMax,1,0)]
     
     cat(",\t",i,":",SMD[,sum((IPboPct-IPboPctLI)^2)])
   }
-  
+ 
+  # Finalize naming of initial poor identifiers
   setnames(SMD,"IPboPct","InitialPoor")  # or maybe InitialPoorBasedOnRealIterativePercentile !
   
   setnames(SMD,"Dcil_TIP_Cons_PAdj","Dcil_IP_Cons_PAdj") # This Iteration Poor => Initial Poor
   setnames(SMD,"Pctl_TIP_Cons_PAdj","Pctl_IP_Cons_PAdj") 
   
-  
+  # Generate deciles based on expenditure using final price index
   IPDX <- DoDeciling(HHDT = SMD,
                      PriceIndexDT = PriceDTBasedOnThisIterationPoor,
                      OrderingVar = "Expenditure",
@@ -166,9 +176,11 @@ for(year in (Settings$startyear:Settings$endyear)){
   
   SMD <- SMD[,setdiff(names(SMD),c("First25","IPboPctLI")),with=FALSE]
   
+  # Merge selected new variables back into MD
   mdset <- setdiff(names(MD),names(SMD))
   MD <- merge(MD[,c("HHID",mdset),with=FALSE],SMD,by="HHID")
   
+  # Create nominal deciles/percentiles
   MD <- MD[order(Total_Consumption_Month_per)]  
   MD <- MD[,crw:=cumsum(Weight*Size)/sum(Weight*Size)]  # Cumulative Relative Weight
   MD <- MD[,Dcil_Gen_Cons_Nominal:=cut(crw,breaks = seq(0,1,.1),labels = 1:10)]
@@ -184,7 +196,8 @@ for(year in (Settings$startyear:Settings$endyear)){
   
   
   save(MD,file=paste0(Settings$HEISProcessedPath,"Y",year,"InitialPoor.rda"))
-  
+
+  # Save selected deciles separately for quick access
   Deciles <- MD[,.(HHID,Weight,Size,EqSizeOECD,
                    Total_Consumption_Month,Total_Expenditure_Month,
                    Total_Consumption_Month_per,Total_Expenditure_Month_per,
