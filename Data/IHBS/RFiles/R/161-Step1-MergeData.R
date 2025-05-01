@@ -16,7 +16,7 @@ library(readxl)
 library(data.table)
 
 
-
+# Loop through each year defined in Settings
 for(year in (Settings$startyear:Settings$endyear)){
   cat(paste0("\n------------------------------\nYear:",year,"\n"))
   
@@ -26,6 +26,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   load(file=paste0(Settings$HEISProcessedPath,"Y",year,"HHI.rda"))
   load(file=paste0(Settings$HEISProcessedPath,"Y",year,"HHHouseProperties.rda"))
 
+  # Load data for all non-food expenditure categories
   for(G in c("Cigars","Cloths","Amusements","Communications", 
              "Educations", "Furnitures","Hotels","Energys","House", "Medicals",
              "Hygienes","Transportations","Others", "Restaurants",
@@ -34,6 +35,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   
   FoodNutritionData <- FoodNutritionData[FoodKCaloriesHH>0]
   
+  # Merge all datasets into a master data table (MD) by household ID (HHID)
   MD<-merge(HHBase,HHI ,by =c("HHID"),all=TRUE)
   MD<-merge(MD,FoodNutritionData ,by =c("HHID"),all=TRUE)
   MD<-merge(MD,FoodExpData,by =c("HHID"),all=TRUE)
@@ -55,16 +57,20 @@ for(year in (Settings$startyear:Settings$endyear)){
   MD<-merge(MD,OwnedDurableItemsDepreciation,by =c("HHID"),all=TRUE)
   MD<-merge(MD,InvestmentData,by =c("HHID"),all=TRUE)
 
-  #Calculate Monthly Total Expenditures 
+  # Calculate Monthly Total Expenditures 
   for (col in union(Settings$ExpenditureCols,Settings$ConsumptionCols))
     MD[is.na(get(col)), (col) := 0]
   
   MD[is.na(Investment_Exp),Investment_Exp:=0]
   
+  # Calculate total monthly expenditures by summing all relevant expenditure columns
   MD[,Total_Expenditure_Month := Reduce(`+`, .SD), .SDcols=Settings$ExpenditureCols]
+  # Calculate total monthly consumption by summing all relevant consumption columns
   MD[,Total_Consumption_Month := Reduce(`+`, .SD), .SDcols=Settings$ConsumptionCols]
   
+  # Normalize total monthly expenditures by household equivalent size (OECD scale)
   MD[,Total_Expenditure_Month_per:=Total_Expenditure_Month/EqSizeOECD]
+  # Normalize total monthly consumption by household equivalent size (OECD scale)
   MD[,Total_Consumption_Month_per:=Total_Consumption_Month/EqSizeOECD]
   
   
