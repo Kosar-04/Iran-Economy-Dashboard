@@ -11,22 +11,25 @@ Settings <- yaml.load_file("Settings.yaml")
 library(readxl)
 library(spatstat)
 library(data.table)
+# Initialize output table to store food poverty line for each year
 BigsdTable <- data.table()
+# Set the base year for food bundle creation
 year<-Settings$baseBundleyear
-
+# Load household data and food data for the base year
 load(file=paste0(Settings$HEISProcessedPath,"Y",year,"InitialPoorClustered.rda"))
 load(file=paste0(Settings$HEISProcessedPath,"Y",year,"BigFData.rda"))
-
+# Select reference households in middle-income deciles for each region
 MD[,Selected_Group:=ifelse((Region=="Urban" & Dcil_IP_Cons_PAdj==4) |
                              (Region=="Rural" & Dcil_IP_Cons_PAdj==3),1,0)]
 
+# Create all combinations of HHID and FoodType, then merge food data and household metadata
 Bfd2 <- data.table(expand.grid(HHID=MD$HHID,FoodType=unique(BigFData$FoodType)))
 Bfd2 <- merge(Bfd2,BigFData,all.x = TRUE)
 Bfd2 <- merge(Bfd2,MD[,.(HHID,Region,Weight,Size,
                          EqSizeCalory,Selected_Group)],by="HHID")
 Bfd2[is.na(Bfd2)]<-0
 Bfd2[Price<0.1,Price:=NA]
-
+# Aggregate food quantities and calories by household and food type
 BaseYearBasket <- Bfd2[,
                        .(FGrams_0=sum(FGrams),
                          FoodKCalories_0=sum(FoodKCalories),
@@ -34,18 +37,20 @@ BaseYearBasket <- Bfd2[,
                          Size=first(Size), EqSizeCalory=first(EqSizeCalory),
                          Selected_Group=first(Selected_Group)),
                        by=.(HHID,FoodType)]
+# Calculate per capita food quantity and calorie bundle for selected group
 BaseYearBasket <- BaseYearBasket[Selected_Group==1,
                                  .(FGramspc=weighted.mean(FGrams_0/EqSizeCalory,
                                                           Weight*Size),
                                    FKCalspc=weighted.mean(FoodKCalories_0/EqSizeCalory,
                                                           Weight*Size)),
                                  by=.(FoodType,Region)]
-
+# Normalize bundle to match adult calorie needs
 BaseYearBasket[,BasketCals:=sum(FKCalspc),by=Region]
 BaseYearBasket[,StandardFGramspc:=FGramspc*Settings$KCaloryNeed_Adult_WorldBank/BasketCals]
 
-
-#Reweighting
+# Hardcoded population estimates for reweighting
+# These are used to rescale sample weights in different years
+# Reweighting
 Pop_U84 <- 47096
 Pop_U85 <- 48260
 Pop_U86 <- 49287.8
@@ -87,8 +92,7 @@ Pop_R100 <- 20179
 Pop_R101 <- 20045
 Pop_R102 <- 19902
 
- 
-
+# Loop over each year in the study period to compute food poverty line
 for(year in (Settings$startyear:Settings$endyear)){
   cat(paste0("\n------------------------------\nYear:",year,"\n"))
   
@@ -172,9 +176,10 @@ for(year in (Settings$startyear:Settings$endyear)){
     MD[,Weight:=ifelse(Region=="Urban",Weight*Pop_U102/Weight_U,Weight*Pop_R102/Weight_R)]   
   }
   
-  
+  # Load food consumption and nutritional data for the year
   load(file=paste0(Settings$HEISProcessedPath,"Y",year,"BigFDataTotalNutrition.rda"))
-  
+
+   # Define selected group (deciles 2–5) for price calculations
   MD[,Selected_Group:=ifelse(Dcil_IP_Cons_PAdj %in% 2:5,1,0)]
   
   
@@ -183,6 +188,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   Bfd2[is.na(Bfd2)]<-0
   Bfd2[Price<0.1,Price:=NA]
   
+  # Calculate weighted average prices per household-food item
   Bfd2 <- Bfd2[,
                .(Price=weighted.mean(Price,Weight*Size*FGrams,na.rm = TRUE),
                  FGrams=sum(FGrams),
@@ -190,28 +196,33 @@ for(year in (Settings$startyear:Settings$endyear)){
                  Region=first(Region), Weight=first(Weight),
                  Size=first(Size),Selected_Group=first(Selected_Group)),
                by=.(HHID,FoodType)]
-  
+
+  # Compute median and mean price per food item, region, and cluster for selected group
   Bfd3 <- Bfd2[Selected_Group==1 & !is.na(Price),
                .(MedPrice=weighted.median(Price,Weight*Size*FGrams),
                  MeanPrice=weighted.mean(Price,Weight*Size*FGrams,na.rm = TRUE)
                  ),
                by=.(FoodType,Region,cluster3)]
+  # Choose the lowest average price per food item (price floor)
   BasketPrice <- Bfd3[!is.na(MeanPrice),
                       .(Price=min(MeanPrice)),
                       by=.(FoodType,Region,cluster3)]
   
+  # Merge with base year quantities and compute total cost of food basket
   BasketCost <- merge(BaseYearBasket,BasketPrice,by=c("FoodType","Region"))
   BasketCost[,Cost:=(StandardFGramspc/1000)*Price]
   FPLineBasket <- BasketCost[,.(FPLine=sum(Cost)),by=cluster3]
-  
+
+  # Merge food poverty line into household metadata
   MD <- merge(MD,FPLineBasket,all.x=TRUE,by="cluster3")
+  # Store food poverty line for this year
   sd <- MD
   sd <- sd[,FPLineBasketyear:=weighted.mean(FPLine)]
     sd <-sd[,Year:=year]
   sd <- unique(sd[,.(Year,FPLineBasketyear)])
   BigsdTable <- rbind(BigsdTable,sd)
   
-  
+  # Mark households as food poor if food expenditure is below food poverty line
   MD[,FoodPoor:=ifelse(TOriginalFoodExpenditure_Per < FPLine,1,0)]
 
   cat(unlist(MD[cluster3==13,.(FPLine,weighted.mean(FoodPoor))][1]))
