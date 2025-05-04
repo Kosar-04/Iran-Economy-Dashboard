@@ -26,6 +26,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   tab <- Rentwt$Table
   if(is.na(tab))
     next
+  # Load urban and rural rent-related income tables
   UTRentW <- Tables[[paste0("U",year,tab)]]
   RTRentW <- Tables[[paste0("R",year,tab)]]
   TRentW <- rbind(UTRentW,RTRentW,fill=TRUE)
