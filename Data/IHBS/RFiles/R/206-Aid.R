@@ -26,6 +26,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   tab <- Aidwt$Table
   if(is.na(tab))
     next
+   # Extract urban and rural aid data tables 
   UTAidW <- Tables[[paste0("U",year,tab)]]
   RTAidW <- Tables[[paste0("R",year,tab)]]
   TAidW <- rbind(UTAidW,RTAidW,fill=TRUE)
@@ -43,6 +44,7 @@ for(year in (Settings$startyear:Settings$endyear)){
     TAidW[,aid:=as.numeric(aid)]
   }
   TAidW[is.na(TAidW)] <- 0
+  # Aggregate aid income by household using sum of aid amounts
   AidWageData <- TAidW[,lapply(.SD,sum),by=HHID]
   save(AidWageData, file = paste0(Settings$HEISProcessedPath,"Y",year,"AidWage.rda"))
 }
