@@ -28,6 +28,7 @@ for(year in (Settings$startyear:Settings$endyear)){
     next
   UTbussW <- Tables[[paste0("U",year,tab)]]
   RTbussW <- Tables[[paste0("R",year,tab)]]
+  # Combine Urban and Rural data
   TbussW <- rbind(UTbussW,RTbussW,fill=TRUE)
   save(TbussW, file = paste0(Settings$HEISProcessedPath,"Y",year,"TbussW.rda"))
   
@@ -40,7 +41,8 @@ for(year in (Settings$startyear:Settings$endyear)){
   pcols <- intersect(names(TbussW),c("HHID","IndivNo","WorkType","BSector","BussNetIncomeY"))
   TbussW <- TbussW[,pcols,with=FALSE]
   
-  
+  # Determine which sector the self-employed person belongs to
+  # Before 1368 set sector as 2 manually (private)
   if(year <= 68){
     TbussW[,BSector:=2]
   }else{
@@ -56,7 +58,7 @@ for(year in (Settings$startyear:Settings$endyear)){
    TbussW2<-TbussW[WorkType==4,.(HHID,WorkType)]
    save(TbussW2, file = paste0(Settings$HEISProcessedPath,"Y",year,"TbussW2.rda"))
    
-   
+    # Aggregate data to household level
    BussIncomeData <- TbussW[,.(BussNetIncomeY=sum(BussNetIncomeY),
                                BussEarners=.N,
                                Sector=100),
