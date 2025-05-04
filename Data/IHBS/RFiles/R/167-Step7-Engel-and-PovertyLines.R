@@ -13,23 +13,27 @@ Settings <- yaml.load_file("Settings.yaml")
 library(readxl)
 library(data.table)
 
+# Initialize an empty data table to store Engel coefficients across years
 BigEngelTable <- data.table()
 
 for(year in (Settings$startyear:Settings$endyear)){
   cat(paste0("\nYear:",year,"\t"))
-  
+
+  # Load yearly household-level processed data with food poverty lines
   load(file=paste0(Settings$HEISProcessedPath,"Y",year,"FoodPoor.rda"))
   MD[is.na(Durable_Dep),Durable_Dep:=0]
-  
+
+  # Calculate household Engel coefficient: food expenditure / total expenditure
   MD <- MD[,EngelH:=TOriginalFoodExpenditure/Total_Expenditure_Month]
   
-  #Occasioanl Expenditure Ratio
+  # Occasioanl Expenditure Ratio
   MD <- MD[,OEX:=Medical_Exp+Durable_Dep+Durable_NoDep+Durable_Emergency]
   MD <- MD[,OER_H:=OEX/Total_Expenditure_Month]
   
-  #Durable Service Cost
+  # Durable Service Cost
   MD <- MD[,DSC_H:=OwnedDurableItemsDepreciation/Total_Expenditure_Month]
-  
+
+   # Filter households near food poverty line (80%–120%) to calculate Engel stats
   EngelD <- MD[ TOriginalFoodExpenditure_Per>0.8*FPLine &
                    TOriginalFoodExpenditure_Per<1.2*FPLine,
                  .(.N,
@@ -53,6 +57,7 @@ InflationData<-InflationData[order(Year)]
 InflationData[,l.F1:=data.table::shift(F1)]
 InflationData[,F2 := F1*l.F1]
 
+# Merge inflation data into Engel table
 BigEngelTable<-merge(BigEngelTable,InflationData,by="Year")
 BigEngelTable<-BigEngelTable[order(Year,cluster3)]
 
@@ -67,6 +72,7 @@ BigEngelTable[,l2.OER:=data.table::shift(OER,2),by=cluster3]
 BigEngelTable[,l.DSC:=data.table::shift(DSC),by=cluster3]
 BigEngelTable[,l2.DSC:=data.table::shift(DSC,2),by=cluster3]
 
+# Calculate Modified Engel using current and lagged values depending on availability
 BigEngelTable[is.na(EngelX) & is.na(EngelX2),ModifiedEngel:=Engel]
 BigEngelTable[!is.na(EngelX) & is.na(EngelX2),ModifiedEngel:=(Engel+EngelX)/2]
 BigEngelTable[is.na(ModifiedEngel),ModifiedEngel:=(Engel+EngelX+EngelX2)/3]
@@ -81,6 +87,7 @@ BigEngelTable[is.na(l.DSC) & is.na(l2.DSC), ModDSC:=DSC]
 BigEngelTable[!is.na(l.DSC) & is.na(l2.DSC), ModDSC:=(DSC+l.DSC)/2]
 BigEngelTable[is.na(ModDSC), ModDSC:=(DSC+l.DSC+l2.DSC)/3]
 
+# Calculate comprehensive poverty line adjusted for non-food occasional expenditures
 BigEngelTable[,CMPovLine:=PovertyLine*(1-OER+DSC)]
 
 
