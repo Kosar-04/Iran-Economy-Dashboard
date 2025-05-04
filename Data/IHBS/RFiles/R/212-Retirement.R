@@ -41,6 +41,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   }
   
   TRetirementW[is.na(TRetirementW)] <- 0
+  # Aggregate retirement income by household ID
   RetirementWageData <- TRetirementW[,lapply(.SD,sum),by=HHID]
   save(RetirementWageData, file = paste0(Settings$HEISProcessedPath,"Y",year,"RetirementWage.rda"))
 }
