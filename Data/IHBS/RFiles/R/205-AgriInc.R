@@ -15,7 +15,7 @@ library(data.table)
 library(stringr)
 library(readxl)
 
-
+# Load metadata for agricultural income
 AgriIncTable <- data.table(read_excel(Settings$MetaDataFilePath,sheet=Settings$MDS_AgriInc))
 
 
@@ -48,6 +48,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   }
   
   TAgriW[is.na(TAgriW)] <- 0
+  # Create secondary table for agricultural self-employed individuals
   TAgriW2<-TAgriW[WorkType==4,.(HHID,WorkType)]
   save(TAgriW2, file = paste0(Settings$HEISProcessedPath,"Y",year,"TAgriW2.rda"))
   
