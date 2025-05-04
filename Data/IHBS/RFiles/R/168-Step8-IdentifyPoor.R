@@ -12,6 +12,8 @@ Settings <- yaml.load_file("Settings.yaml")
 
 library(data.table)
 
+# Loop through each year from (startyear + 2) to endyear
+# This is done because Engel-based poverty lines need 2 years of lagged data
 for(year in ((Settings$startyear+2):Settings$endyear)){
   cat(paste0("\nYear:",year,"\t"))
   
@@ -28,6 +30,7 @@ for(year in ((Settings$startyear+2):Settings$endyear)){
                                  OER,ModOER,
                                  DSC,ModDSC)],
               by=c("Region","cluster3"))
+ # If household's per capita monthly consumption is less than CMPovLine: marked as poor
   MD[,FinalPoor:=ifelse(Total_Consumption_Month_per < CMPovLine,1,0 )]
 
   save(MD,file=paste0(Settings$HEISProcessedPath,"Y",year,"FinalPoor.rda"))
