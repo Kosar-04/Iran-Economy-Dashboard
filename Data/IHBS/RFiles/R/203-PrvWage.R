@@ -16,10 +16,10 @@ library(data.table)
 library(stringr)
 library(readxl)
 
-
+# Load the private wage table data
 PrvWageTable <- data.table(read_excel(Settings$MetaDataFilePath,sheet=Settings$MDS_PrvWage))
 
-
+# Loop over the years specified from 1385 to the end year
 for(year in 85:Settings$endyear){#(Settings$startyear:Settings$endyear)){
   cat(paste0("\n------------------------------\nYear:",year,"\n"))
   load(file=paste0(Settings$HEISRawPath,"Y",year,"Raw.rda"))
@@ -94,7 +94,8 @@ for(year in 85:Settings$endyear){#(Settings$startyear:Settings$endyear)){
   
     save(PrvWageData, file = paste0(Settings$HEISProcessedPath,"Y",year,"PrvWages.rda"))
  #  print(mean(PrvWageData$PrvWageNetIncomeY))
-    
+  
+  # Create a summary dataset with only HHID and the number of private earners
     Prv1<-PrvWageData[,.(HHID,PrvEarners)]
     save(Prv1, file = paste0(Settings$HEISProcessedPath,"Y",year,"Prv1.rda"))
     
