@@ -15,7 +15,7 @@ library(data.table)
 library(stringr)
 library(readxl)
 
-
+# Load homemade income metadata table
 HomemadeTable <- data.table(read_excel(Settings$MetaDataFilePath,sheet=Settings$MDS_Homemade))
 
 
@@ -26,6 +26,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   tab <- Homemadewt$Table
   if(is.na(tab))
     next
+  # Extract urban and rural homemade income tables
   UTHomemadeW <- Tables[[paste0("U",year,tab)]]
   RTHomemadeW <- Tables[[paste0("R",year,tab)]]
   THomemadeW <- rbind(UTHomemadeW,RTHomemadeW,fill=TRUE)
@@ -41,6 +42,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   }
 
   THomemadeW[is.na(THomemadeW)] <- 0
+   # Aggregate homemade income by household
   HomemadeWageData <- THomemadeW[,lapply(.SD,sum),by=HHID]
   save(HomemadeWageData, file = paste0(Settings$HEISProcessedPath,"Y",year,"HomemadeWage.rda"))
 }
