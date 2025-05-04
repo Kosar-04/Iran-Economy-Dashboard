@@ -17,6 +17,7 @@ library(data.table)
 library(stringr)
 library(readxl)
 
+# Load metadata table for 'OtherIncome' from the specified Excel sheet
 OtherIncomeTable <- data.table(read_excel(Settings$MetaDataFilePath,
                                           sheet=Settings$MDS_OtherInc))
 
@@ -27,6 +28,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   tab <- OtherITb$Table
   if(is.na(tab))
     next
+  # Extract rural and urban household data tables for the selected income category
   UOtherIncomeData <- Tables[[paste0("U",year,tab)]]
   ROtherIncomeData <- Tables[[paste0("R",year,tab)]]
   OtherIncomeData <- rbind(UOtherIncomeData,ROtherIncomeData,fill=TRUE)
@@ -36,6 +38,8 @@ for(year in (Settings$startyear:Settings$endyear)){
     setnames(OtherIncomeData,OtherITb$HHID,"HHID")
     setnames(OtherIncomeData,OtherITb$Code,"Code")
     setnames(OtherIncomeData,OtherITb$Value,"Value")
+    
+    # Assign income amounts to specific categories using value ranges in metadata
     OtherIncomeData[Code %in% eval(parse(text = OtherITb$Retirement)),
               Retirement:=sum(Value),by=HHID]
     OtherIncomeData[Code %in% eval(parse(text = OtherITb$Rent)),
@@ -59,6 +63,7 @@ for(year in (Settings$startyear:Settings$endyear)){
   OtherIncomeData <- OtherIncomeData[,lapply(.SD, sum, na.rm=TRUE),
                                      by=HHID,.SDcols=pcols]
   OtherIncomeData <- OtherIncomeData[,lapply(.SD, function(x){x[is.na(x)]<-0;return(x)}), by=HHID, .SDcols=pcols]
+  # Create a new column 'OtherIncome' by summing all non-labor income sources
   OtherIncomeData[, OtherIncome := Reduce(`+`, .SD), .SDcols=pcols]
   save(OtherIncomeData, 
        file = paste0(Settings$HEISProcessedPath,"Y",year,"OtherIncome.rda"))
