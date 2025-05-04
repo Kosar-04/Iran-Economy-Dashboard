@@ -15,7 +15,7 @@ library(data.table)
 library(stringr)
 library(readxl)
 
-
+# Read intra-household income metadata
 IntraTable <- data.table(read_excel(Settings$MetaDataFilePath,sheet=Settings$MDS_Intra))
 
 
@@ -26,6 +26,8 @@ for(year in (Settings$startyear:Settings$endyear)){
   tab <- Intrawt$Table
   if(is.na(tab))
     next
+
+  # Load intra-household transfer data for urban and rural samples
   UTIntraW <- Tables[[paste0("U",year,tab)]]
   RTIntraW <- Tables[[paste0("R",year,tab)]]
   TIntraW <- rbind(UTIntraW,RTIntraW,fill=TRUE)
