@@ -15,7 +15,7 @@ library(data.table)
 library(stringr)
 library(readxl)
 
-
+# Load interest income metadata
 InterestTable <- data.table(read_excel(Settings$MetaDataFilePath,sheet=Settings$MDS_Interest))
 
 
@@ -40,6 +40,7 @@ for(year in (Settings$startyear:Settings$endyear)){
     TInterestW <- TInterestW[Code %in% Interestwt$StartCode:Interestwt$EndCode]
   }
   TInterestW[is.na(TInterestW)] <- 0
+  # Aggregate interest income by household
   InterestWageData <- TInterestW[,lapply(.SD,sum),by=HHID]
   save(InterestWageData, file = paste0(Settings$HEISProcessedPath,"Y",year,"InterestWage.rda"))
 }
