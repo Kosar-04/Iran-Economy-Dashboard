@@ -19,7 +19,7 @@ library(readxl)
 
 PubWageTable <- data.table(read_excel(Settings$MetaDataFilePath,sheet=Settings$MDS_PubWage))
 
-
+# Iterate over years from 1385 to the end year defined in settings
 for(year in 85:Settings$endyear){#(Settings$startyear:Settings$endyear)){
   cat(paste0("\n------------------------------\nYear:",year,"\n"))
   load(file=paste0(Settings$HEISRawPath,"Y",year,"Raw.rda"))
@@ -35,7 +35,7 @@ for(year in 85:Settings$endyear){#(Settings$startyear:Settings$endyear)){
     pubwtr <- pubwt
   }
   
-  
+ # Load and rename columns in the urban public wage table 
   tab <- pubwtu$Table
   UTpubW <- Tables[[paste0("U",year,tab)]]
   for(n in names(UTpubW)){
@@ -43,7 +43,8 @@ for(year in 85:Settings$endyear){#(Settings$startyear:Settings$endyear)){
     if(length(x)>0)
       setnames(UTpubW,n,names(pubwtu)[x])
   }
-  
+
+   # Load and rename columns in the rural public wage table
   tab <- pubwtr$Table
   RTpubW <- Tables[[paste0("R",year,tab)]]
   for(n in names(RTpubW)){
@@ -61,7 +62,8 @@ for(year in 85:Settings$endyear){#(Settings$startyear:Settings$endyear)){
   pcols <- intersect(names(TpubW),c("HHID","IndivNo","WageSector","HoursPerDay","DayPerWeek","PubWageNetIncomeY"))
   #pcols <- intersect(names(TpubW),c("HHID","indiv","shaghel","shoghl","current_shoghl","faaliat","section","hour_in_day","day_in_week","gross_income_m","gross_income_y","mostameri_m","mostameri_y","gheyremostameri_m","gheyremostameri_y","net_income_m","net_income_y"))
   TpubW <- TpubW[,pcols,with=FALSE]
-  
+
+  # For early years before wage sector variable is available, assume WageSector = 1
   if(year <=68){
     TpubW[,WageSector:=1]
   }else{
@@ -83,6 +85,7 @@ for(year in 85:Settings$endyear){#(Settings$startyear:Settings$endyear)){
   if("HoursPerDay" %in% names(TpubW)){
     print(year)
   }
+   # Aggregate individual records to household-level data
   PubWageData <- TpubW[,.(PubWageNetIncomeY=sum(PubWageNetIncomeY),
                           Hours=sum(HoursPerDay*DayPerWeek),
                           PubEarners=.N,
