@@ -40,6 +40,7 @@ for(year in (Settings$startyear:Settings$endyear)){
 
   
   TSubsidyW[is.na(TSubsidyW)] <- 0
+  # Aggregate subsidy values by household
    SubsidyWageData <- TSubsidyW[,lapply(.SD,sum),by=HHID]
    save(SubsidyWageData, file = paste0(Settings$HEISProcessedPath,"Y",year,"Subsidy.rda"))
 }
