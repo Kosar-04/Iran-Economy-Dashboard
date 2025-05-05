@@ -56,6 +56,8 @@ for(year in (93:Settings$endyear)){
     tab <- ft$Table
     if(is.na(tab))
       next
+
+    # Merge urban and rural tables
     UTF <- Tables[[paste0("U",year,tab)]]
     RTF <- Tables[[paste0("R",year,tab)]]
     TF <- rbind(UTF,RTF)
@@ -100,7 +102,8 @@ for(year in (93:Settings$endyear)){
       TF[,Kilos:=as.numeric(Kilos)]
       TF[,Grams:=as.numeric(Grams)]
       TF[,Expenditure:=as.numeric(Expenditure)]
-      
+
+      # Impute missing prices and FGrams if possible
       TF[is.na(Grams) & !is.na(Kilos),Grams:=0]
       TF[is.na(Kilos) & !is.na(Grams),Kilos:=0]
       TF[,FGrams:=(Kilos*1000+Grams)]
