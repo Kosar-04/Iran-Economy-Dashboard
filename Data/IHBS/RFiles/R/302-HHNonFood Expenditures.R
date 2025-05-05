@@ -14,7 +14,7 @@ library(readxl)
 library(data.table)
 library(stringr)
 
-
+# Define all non-food expenditure categories
 sections_names <- c("Tobacco",
                     "MenCloth" , "WomenCloth","KidsCloth","OtherCloth",
                     "ActualRent","ImputedRent","Water_WasteWater","OtherHouse","EnergyNew",
@@ -76,7 +76,8 @@ for(section in sections_names){
     }
     
     TS[,(paste0(section,"_Exp")):=as.numeric(get(paste0(section,"_Exp")))]
-    
+
+    # For monthly-reported sections
     if(tab=="P3S13" | tab=="P3S14"){
       TS[,(paste0(section,"_Exp")):=get(paste0(section,"_Exp"))/12]
       #cat("======*****========")
